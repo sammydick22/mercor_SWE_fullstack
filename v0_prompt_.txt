@@ -1,0 +1,254 @@
+Candidate RAG Chatbot Frontend Specification
+Overview
+A modern, responsive web application that provides a chat interface for hiring managers to search and evaluate candidates using natural language queries. The frontend will connect to the existing Candidate RAG Chatbot API to retrieve candidate information and maintain conversation context.
+Core Features
+Chat Interface: Natural language query interface for candidate searches
+Formatted Responses: Display candidate information with structured formatting
+Conversation History: Maintain and display the chat history
+Continuity: Support for follow-up questions with context
+Management: Clear conversation history functionality
+API Integration Details
+Base URL Configuration
+// Configure in environment variables or config file
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'; 
+
+API Endpoints
+Chat Endpoint
+URL: ${API_BASE_URL}/api/chat
+Method: POST
+Request Body:
+{
+  "message": "Find top full-stack candidates with diverse backgrounds",
+  "conversation_id": "optional-uuid-for-conversation-tracking"
+}
+
+
+Response:
+{
+  "response": "👤 **Name:** John Doe\n📧 **Email:** john@example.com\n...",
+  "success": true,
+  "meta": {
+    "is_partial": false,
+    "missing_information": [],
+    "has_results": true,
+    "result_count": 3
+  },
+  "conversation_id": "123e4567-e89b-12d3-a456-426614174000"
+}
+
+
+Clear Conversation Endpoint
+URL: ${API_BASE_URL}/api/conversation/clear
+Method: POST
+Request Body:
+{
+  "conversation_id": "optional-uuid-for-specific-conversation"
+}
+
+
+Response:
+{
+  "success": true,
+  "message": "Conversation cleared"
+}
+
+
+Health Check Endpoint
+URL: ${API_BASE_URL}/api/health
+Method: GET
+Response:
+{
+  "status": "healthy"
+}
+
+
+UI Design & Layout
+Main Components
+Header
+Logo and application name
+Theme toggle (light/dark mode)
+User information (if authentication is added later)
+Chat Container
+Message history display area
+Clear conversation button
+Export conversation button (optional)
+Message Input
+Text input field
+Send button
+Example queries dropdown/button
+Candidate Display
+Formatted candidate information
+Visual indicators for fields (emojis and formatting)
+Action buttons (copy, save, etc.)
+Loading States
+Typing indicator when waiting for response
+Progress indicators for long-running queries
+Layout Structure
+┌─────────────────────────────────────────────┐
+│                   HEADER                    │
+├─────────────────────────────────────────────┤
+│                                             │
+│                                             │
+│               CHAT HISTORY                  │
+│               (SCROLLABLE)                  │
+│                                             │
+│                                             │
+├─────────────────────────────────────────────┤
+│ MESSAGE INPUT         │      SEND BUTTON    │
+└─────────────────────────────────────────────┘
+
+Component Architecture
+Key Components
+ChatContainer: Main wrapper component
+Manages the overall layout
+Handles API connection status
+MessageList: Displays the conversation history
+Renders user messages and bot responses
+Handles scrolling behavior
+Formats markdown content in responses
+CandidateCard: Formats candidate information
+Displays structured candidate data
+Handles special formatting for fields
+Provides interactive elements (e.g., copy email)
+InputArea: Manages user input
+Handles text input and submission
+Provides example query suggestions
+Manages input validation and feedback
+LoadingIndicator: Shows status while waiting
+Displays typing animation
+Shows progress for long queries
+ErrorDisplay: Handles error states
+Shows user-friendly error messages
+Provides retry functionality
+State Management
+Core State Objects
+Messages Array
+interface Message {
+  id: string;
+  content: string;
+  sender: 'user' | 'bot';
+  timestamp: Date;
+  isLoading?: boolean;
+  error?: string;
+  metadata?: {
+    resultCount?: number;
+    isPartial?: boolean;
+    isFollowup?: boolean;
+  };
+}
+
+Conversation State
+interface ConversationState {
+  conversationId: string | null;
+  messages: Message[];
+  isLoading: boolean;
+  error: string | null;
+}
+
+API Integration Code
+Chat Service
+// services/chatService.ts
+export async function sendMessage(message: string, conversationId?: string) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message,
+        ...(conversationId && { conversation_id: conversationId }),
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to send message');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error sending message:', error);
+    throw error;
+  }
+}
+
+export async function clearConversation(conversationId?: string) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/conversation/clear`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...(conversationId && { conversation_id: conversationId }),
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to clear conversation');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error clearing conversation:', error);
+    throw error;
+  }
+}
+
+Message Formatting
+The API returns formatted text with Markdown and emojis. The frontend needs to:
+Parse and render Markdown (including bold, italics, lists)
+Display emojis correctly
+Handle message sections for different candidate attributes
+Example formatter:
+import ReactMarkdown from 'react-markdown';
+
+const FormattedMessage = ({ content }) => {
+  return (
+    <div className="message-content">
+      <ReactMarkdown>{content}</ReactMarkdown>
+    </div>
+  );
+};
+
+Responsive Design Specifications
+Desktop/Laptop (1024px and above)
+Full layout with spacious message display
+Side panel for additional information if needed
+Don’t worry about smaller form factors for now
+User Experience Considerations
+First-time User Experience
+Welcome message explaining capabilities
+Suggested starter queries
+Brief tutorial overlay (optional)
+Error Handling
+Network connectivity issues
+API response errors
+Input validation warnings
+Accessibility
+WCAG 2.1 AA compliance
+Keyboard navigation
+Screen reader compatibility
+Sufficient color contrast
+Proper ARIA attributes
+Example Queries Section
+Include a section with example queries the user can click to populate the input field:
+"Find software engineers with React and AWS experience"
+"Show candidates with Master's degrees from top schools"
+"Find candidates with salary expectations under $100,000"
+"Who are the project managers with technical backgrounds?"
+"Show me candidates from Brazil with Python skills"
+Additional Features (Optional)
+Candidate Tagging/Saving: Allow users to mark candidates for follow-up
+Export Functionality: Export conversation or candidate data to CSV
+Filter Interface: Visual filters to refine results
+Rich Previews: Enhanced displays for candidate profiles
+Dark/Light Theme: Theme toggle for user preference
+Deployment Notes
+Set up environment variables for the API URL (adjust for development/production)
+Ensure CORS is properly configured on the backend
+Consider rate limiting for production deployment
+Would you like me to elaborate on any specific part of this specification? Or are you ready for me to prepare this in a format suitable for Vercel V0?
+

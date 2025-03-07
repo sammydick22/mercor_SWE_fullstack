@@ -1,5 +1,3 @@
-from weaviate.agents.query import AgentResponse # type: ignore
-
 def format_chatbot_response(agent_response):
     """
     Formats a Weaviate Query Agent response into a chatbot-friendly format.
@@ -10,7 +8,7 @@ def format_chatbot_response(agent_response):
     Returns:
         A dictionary containing the formatted response.
     """
-    if not agent_response or not agent_response.final_answer:
+    if not agent_response or not hasattr(agent_response, 'final_answer') or not agent_response.final_answer:
         return {
             "response": "I'm sorry, I couldn't find an answer to your query. Could you try rephrasing it?",
             "success": False
@@ -20,15 +18,15 @@ def format_chatbot_response(agent_response):
     main_answer = agent_response.final_answer.strip()
     
     # Extract information about whether the answer is partial
-    is_partial = agent_response.is_partial_answer
+    is_partial = agent_response.is_partial_answer if hasattr(agent_response, 'is_partial_answer') else False
     missing_info = []
-    if agent_response.missing_information:
+    if hasattr(agent_response, 'missing_information') and agent_response.missing_information:
         missing_info = [item for item in agent_response.missing_information]
     
     # Determine if there were searches that found results
     has_results = False
     search_results = []
-    if agent_response.searches:
+    if hasattr(agent_response, 'searches') and agent_response.searches:
         for collection_searches in agent_response.searches:
             if collection_searches:
                 has_results = True
@@ -48,8 +46,9 @@ def format_chatbot_response(agent_response):
     }
     
     # If this is a follow-up question and it refers to previous candidates, note this
-    if "previous query" in agent_response.original_query.lower() or "earlier" in agent_response.original_query.lower():
-        response["meta"]["is_followup"] = True
+    if hasattr(agent_response, 'original_query') and agent_response.original_query:
+        if "previous query" in agent_response.original_query.lower() or "earlier" in agent_response.original_query.lower():
+            response["meta"]["is_followup"] = True
     
     return response
 

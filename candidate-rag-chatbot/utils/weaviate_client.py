@@ -1,7 +1,7 @@
 import os
 import weaviate
 from weaviate.classes.init import Auth
-from weaviate.agents.query import QueryAgent # type: ignore
+from weaviate.agents.query import QueryAgent
 from weaviate.exceptions import WeaviateQueryError
 
 # Import configuration
